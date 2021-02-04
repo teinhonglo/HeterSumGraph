@@ -91,13 +91,13 @@ def run_training(model, train_loader, valid_loader, valset, hps, train_dir):
 
 
     criterion = torch.nn.CrossEntropyLoss(reduction='none')
-
+        
     best_train_loss = None
     best_loss = None
     best_F = None
     non_descent_cnt = 0
     saveNo = 0
-
+         
     for epoch in range(1, hps.n_epochs + 1):
         epoch_loss = 0.0
         train_loss = 0.0
@@ -107,17 +107,16 @@ def run_training(model, train_loader, valid_loader, valset, hps, train_dir):
             # if i > 10:
             #     break
             model.train()
-
+        
             if hps.cuda:
-                G.to(torch.device("cuda"))
-
+                G = G.to(torch.device("cuda"))
             outputs = model.forward(G)  # [n_snodes, 2]
             snode_id = G.filter_nodes(lambda nodes: nodes.data["dtype"] == 1)
             label = G.ndata["label"][snode_id].sum(-1)  # [n_nodes]
             G.nodes[snode_id].data["loss"] = criterion(outputs, label).unsqueeze(-1)  # [n_nodes, 1]
             loss = dgl.sum_nodes(G, "loss")  # [batch_size, 1]
             loss = loss.mean()
-
+        
             if not (np.isfinite(loss.data.cpu())).numpy():
                 logger.error("train Loss is not finite. Stopping.")
                 logger.info(loss)
@@ -126,17 +125,17 @@ def run_training(model, train_loader, valid_loader, valset, hps, train_dir):
                         logger.info(name)
                         # logger.info(param.grad.data.sum())
                 raise Exception("train Loss is not finite. Stopping.")
-
+        
             optimizer.zero_grad()
             loss.backward()
             if hps.grad_clip:
                 torch.nn.utils.clip_grad_norm_(model.parameters(), hps.max_grad_norm)
-
+        
             optimizer.step()
-
+        
             train_loss += float(loss.data)
             epoch_loss += float(loss.data)
-
+        
             if i % 100 == 0:
                 if _DEBUG_FLAG_:
                     for name, param in model.named_parameters():
@@ -146,17 +145,17 @@ def run_training(model, train_loader, valid_loader, valset, hps, train_dir):
                 logger.info('       | end of iter {:3d} | time: {:5.2f}s | train loss {:5.4f} | '
                                 .format(i, (time.time() - iter_start_time),float(train_loss / 100)))
                 train_loss = 0.0
-
+        
         if hps.lr_descent:
             new_lr = max(5e-6, hps.lr / (epoch + 1))
             for param_group in list(optimizer.param_groups):
                 param_group['lr'] = new_lr
             logger.info("[INFO] The learning rate now is %f", new_lr)
-
+         
         epoch_avg_loss = epoch_loss / len(train_loader)
         logger.info('   | end of epoch {:3d} | time: {:5.2f}s | epoch train loss {:5.4f} | '
                     .format(epoch, (time.time() - epoch_start_time), float(epoch_avg_loss)))
-
+        
         if not best_train_loss or epoch_avg_loss < best_train_loss:
             save_file = os.path.join(train_dir, "bestmodel")
             logger.info('[INFO] Found new best model with %.3f running_train_loss. Saving to %s', float(epoch_avg_loss),
@@ -167,14 +166,14 @@ def run_training(model, train_loader, valid_loader, valset, hps, train_dir):
             logger.error("[Error] training loss does not descent. Stopping supervisor...")
             save_model(model, os.path.join(train_dir, "earlystop"))
             sys.exit(1)
-
+        
         best_loss, best_F, non_descent_cnt, saveNo = run_eval(model, valid_loader, valset, hps, best_loss, best_F, non_descent_cnt, saveNo)
-
+         
         if non_descent_cnt >= 3:
             logger.error("[Error] val loss does not descent for three times. Stopping supervisor...")
             save_model(model, os.path.join(train_dir, "earlystop"))
             return
-
+        
 
 def run_eval(model, loader, valset, hps, best_loss, best_F, non_descent_cnt, saveNo):
     ''' 
@@ -201,7 +200,7 @@ def run_eval(model, loader, valset, hps, best_loss, best_F, non_descent_cnt, sav
         tester = SLTester(model, hps.m)
         for i, (G, index) in enumerate(loader):
             if hps.cuda:
-                G.to(torch.device("cuda"))
+                G = G.to(torch.device("cuda"))
             tester.evaluation(G, index, valset)
 
     running_avg_loss = tester.running_avg_loss
@@ -350,10 +349,10 @@ def main():
     if hps.model == "HSG":
         model = HSumGraph(hps, embed)
         logger.info("[MODEL] HeterSumGraph ")
-        dataset = ExampleSet(DATA_FILE, vocab, hps.doc_max_timesteps, hps.sent_max_len, FILTER_WORD, train_w2s_path)
-        train_loader = torch.utils.data.DataLoader(dataset, batch_size=hps.batch_size, shuffle=True, num_workers=32,collate_fn=graph_collate_fn)
+        dataset = ExampleSet(DATA_FILE, vocab, hps.doc_max_timesteps, hps.sent_max_len, FILTER_WORD, train_w2s_path, "graph-train")
+        train_loader = torch.utils.data.DataLoader(dataset, batch_size=hps.batch_size, shuffle=True, num_workers=32, collate_fn=graph_collate_fn)
         del dataset
-        valid_dataset = ExampleSet(VALID_FILE, vocab, hps.doc_max_timesteps, hps.sent_max_len, FILTER_WORD, val_w2s_path)
+        valid_dataset = ExampleSet(VALID_FILE, vocab, hps.doc_max_timesteps, hps.sent_max_len, FILTER_WORD, val_w2s_path, "graph-val")
         valid_loader = torch.utils.data.DataLoader(valid_dataset, batch_size=hps.batch_size, shuffle=False, collate_fn=graph_collate_fn, num_workers=32)
     elif hps.model == "HDSG":
         model = HSumDocGraph(hps, embed)
@@ -371,7 +370,7 @@ def main():
 
 
     if args.cuda:
-        model.to(torch.device("cuda:0"))
+        model.to(torch.device("cuda"))
         logger.info("[INFO] Use cuda")
 
     setup_training(model, train_loader, valid_loader, valid_dataset, hps)

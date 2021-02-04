@@ -46,7 +46,6 @@ class HSumGraph(nn.Module):
         self._embed = embed
         self.embed_size = hps.word_emb_dim
 
-
         # sent node feature
         self._init_sn_param()
         self._TFembed = nn.Embedding(10, hps.feat_embed_size)   # box=10

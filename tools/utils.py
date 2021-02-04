@@ -14,8 +14,8 @@ from .logger import *
 import sys
 sys.setrecursionlimit(10000)
 
-_ROUGE_PATH = "/remote-home/dqwang/ROUGE/RELEASE-1.5.5"
-_PYROUGE_TEMP_FILE = "/remote-home/dqwang/"
+_ROUGE_PATH = "pyrouge/tools/ROUGE-1.5.5/"
+_PYROUGE_TEMP_FILE = "./"
 
 
 REMAP = {"-lrb-": "(", "-rrb-": ")", "-lcb-": "{", "-rcb-": "}", 

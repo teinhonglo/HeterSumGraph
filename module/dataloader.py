@@ -142,7 +142,7 @@ class Example2(Example):
 class ExampleSet(torch.utils.data.Dataset):
     """ Constructor: Dataset of example(object) for single document summarization"""
 
-    def __init__(self, data_path, vocab, doc_max_timesteps, sent_max_len, filter_word_path, w2s_path):
+    def __init__(self, data_path, vocab, doc_max_timesteps, sent_max_len, filter_word_path, w2s_path, graph_dir):
         """ Initializes the ExampleSet with the path of data
         
         :param data_path: string; the path of data
@@ -159,6 +159,10 @@ class ExampleSet(torch.utils.data.Dataset):
 
         logger.info("[INFO] Start reading %s", self.__class__.__name__)
         start = time.time()
+        self.data_dir = os.path.join(os.path.dirname(data_path), graph_dir)
+        if not os.path.isdir(self.data_dir):
+            os.mkdir(self.data_dir)
+        self.hi_example_set = LoadHiExampleSet(self.data_dir)
         self.example_list = readJson(data_path)
         logger.info("[INFO] Finish reading %s. Total time is %f, Total size is %d", self.__class__.__name__,
                     time.time() - start, len(self.example_list))
@@ -233,6 +237,7 @@ class ExampleSet(torch.utils.data.Dataset):
                 word2sent, sent2word:  tffrac=int, dtype=0
         """
         G = dgl.DGLGraph()
+        #G = dgl.graph()
         wid2nid, nid2wid = self.AddWordNode(G, input_pad)
         w_nodes = len(nid2wid)
 
@@ -278,8 +283,13 @@ class ExampleSet(torch.utils.data.Dataset):
         input_pad = item.enc_sent_input_pad[:self.doc_max_timesteps]
         label = self.pad_label_m(item.label_matrix)
         w2s_w = self.w2s_tfidf[index]
-        G = self.CreateGraph(input_pad, label, w2s_w)
-
+        #if(len(self.hi_example_set)):
+        try:
+            G, _ = self.hi_example_set[index]
+        except:
+            G = self.CreateGraph(input_pad, label, w2s_w)
+            save_graphs(os.path.join(self.data_dir, str(index) + ".graph.bin"), [G])
+            
         return G, index
 
     def __len__(self):

@@ -84,7 +84,7 @@ def run_test(model, dataset, loader, model_name, hps):
 
         for i, (G, index) in enumerate(loader):
             if hps.cuda:
-                G.to(torch.device("cuda"))
+                G = G.to(torch.device("cuda"))
             tester.evaluation(G, index, dataset, blocking=hps.blocking)
 
     running_avg_loss = tester.running_avg_loss
@@ -211,7 +211,7 @@ def main():
     if hps.model == "HSG":
         model = HSumGraph(hps, embed)
         logger.info("[MODEL] HeterSumGraph ")
-        dataset = ExampleSet(DATA_FILE, vocab, hps.doc_max_timesteps, hps.sent_max_len, FILTER_WORD, test_w2s_path)
+        dataset = ExampleSet(DATA_FILE, vocab, hps.doc_max_timesteps, hps.sent_max_len, FILTER_WORD, test_w2s_path, "graph-test")
         loader = torch.utils.data.DataLoader(dataset, batch_size=hps.batch_size, shuffle=True, num_workers=32,collate_fn=graph_collate_fn)
     elif hps.model == "HDSG":
         model = HSumDocGraph(hps, embed)
@@ -224,7 +224,7 @@ def main():
         raise NotImplementedError("Model Type has not been implemented")
 
     if args.cuda:
-        model.to(torch.device("cuda:0"))
+        model.to(torch.device("cuda"))
         logger.info("[INFO] Use cuda")
 
     logger.info("[INFO] Decoding...")
