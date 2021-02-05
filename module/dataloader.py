@@ -162,7 +162,7 @@ class ExampleSet(torch.utils.data.Dataset):
         self.data_dir = os.path.join(os.path.dirname(data_path), graph_dir)
         if not os.path.isdir(self.data_dir):
             os.mkdir(self.data_dir)
-        self.hi_example_set = LoadHiExampleSet(self.data_dir)
+        #self.hi_example_set = LoadHiExampleSet(self.data_dir)
         self.example_list = readJson(data_path)
         logger.info("[INFO] Finish reading %s. Total time is %f, Total size is %d", self.__class__.__name__,
                     time.time() - start, len(self.example_list))
@@ -283,12 +283,12 @@ class ExampleSet(torch.utils.data.Dataset):
         input_pad = item.enc_sent_input_pad[:self.doc_max_timesteps]
         label = self.pad_label_m(item.label_matrix)
         w2s_w = self.w2s_tfidf[index]
-        #if(len(self.hi_example_set)):
-        try:
-            G, _ = self.hi_example_set[index]
-        except:
-            G = self.CreateGraph(input_pad, label, w2s_w)
-            save_graphs(os.path.join(self.data_dir, str(index) + ".graph.bin"), [G])
+        #try:
+        #    G, _ = self.hi_example_set[index]
+        #except:
+        #    G = self.CreateGraph(input_pad, label, w2s_w)
+        #    save_graphs(os.path.join(self.data_dir, str(index) + ".graph.bin"), [G])
+        G = self.CreateGraph(input_pad, label, w2s_w)
             
         return G, index
 
