@@ -5,7 +5,7 @@ data_dir="datasets/cnndm"
 exp_dir="exp/cnndm"
 gpu=0
 n_epochs=20
-stage=1
+stage=0
 
 set -euo pipefail
 
